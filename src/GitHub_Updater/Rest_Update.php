@@ -48,6 +48,9 @@ class Rest_Update extends Base {
 		parent::__construct();
 		$this->load_options();
 		$this->upgrader_skin = new Rest_Upgrader_Skin();
+
+		$this->datetime = current_time( 'mysql' );
+		$this->update_resource = "";
 	}
 
 	/**
@@ -198,34 +201,41 @@ class Rest_Update extends Base {
 			}
 
 			if ( isset( $_REQUEST['plugin'] ) ) {
+				$this->update_resource = $_REQUEST['plugin'];
 				$this->update_plugin( $_REQUEST['plugin'], $tag );
 			} elseif ( isset( $_REQUEST['theme'] ) ) {
+				$this->update_resource = $_REQUEST['theme'];
 				$this->update_theme( $_REQUEST['theme'], $tag );
 			} else {
 				throw new \UnexpectedValueException( 'No plugin or theme specified for update.' );
 			}
+
+			if ( $this->is_error() ) {
+				$status_code = 417;
+				$success = false;
+			} else {
+				$status_code = 200;
+				$success = true;
+			}
+
+			$messages = $this->getMessage();
+
 		} catch ( \Exception $e ) {
+			$status_code = 417;
+			$messages = $e->getMessage();
+			$success = false;
+
+		} finally{
+
 			$http_response = array(
-				'success'      => false,
-				'messages'     => $e->getMessage(),
+				'success'      => $success,
+				'messages'     => $messages,
 				'webhook'      => $_GET,
-				'elapsed_time' => round( ( microtime( true ) - $start ) * 1000, 2 ) . ' ms',
+				'elapsed_time' => $this->time_lapse($start),
 			);
-			$this->log_exit( $http_response, 417 );
-		}
+			$this->log_exit( $http_response, $status_code);
 
-		$response = array(
-			'success'      => true,
-			'messages'     => $this->get_messages(),
-			'webhook'      => $_GET,
-			'elapsed_time' => round( ( microtime( true ) - $start ) * 1000, 2 ) . ' ms',
-		);
-
-		if ( $this->is_error() ) {
-			$response['success'] = false;
-			$this->log_exit( $response, 417 );
 		}
-		$this->log_exit( $response, 200 );
 	}
 
 	/**
@@ -246,7 +256,6 @@ class Rest_Update extends Base {
 		$current_branch = $repo ?
 			Singleton::get_instance( 'Branch', $this )->get_current_branch( $repo ) :
 			'master';
-
 		return $current_branch;
 	}
 
@@ -275,23 +284,52 @@ class Rest_Update extends Base {
 	}
 
 	/**
-	 * Append $response to debug.log and wp_die().
+  * A "fancy" time_lapse calculator (it prefers "s" vs "ms")
+  */
+public function time_lapse($start, $end = null){
+	$end = isset($end) ? $end : microtime( true );
+	$lapse = ( $end - $start ); 													// microseconds
+	if($lapse < 1) return round($lapse * 1000, 2). ' ms'; // millis
+	return round($lapse, 2) . ' s'; 											// seconds
+}
+
+	/**
+	 * Append $response to debug.log and within the GHU_TABLE_LOGS table
+	 * and finally do a "wp_send_json"
 	 *
 	 * @param array $response
-	 * @param int   $code
-	 *
-	 * 128 == JSON_PRETTY_PRINT
-	 * 64 == JSON_UNESCAPED_SLASHES
+	 * @param int   $status_code
 	 */
-	private function log_exit( $response, $code ) {
-		$json_encode_flags = 128 | 64;
+	private function log_exit( $response, $status_code ) {
 
+		// Append to debug.log
+		// 128 == JSON_PRETTY_PRINT
+		// 64 == JSON_UNESCAPED_SLASHES
+		$json_encode_flags = 128 | 64;
 		error_log( json_encode( $response, $json_encode_flags ) );
-		unset( $response['success'] );
-		if ( 200 === $code ) {
-			wp_die( wp_send_json_success( $response, $code ) );
-		} else {
-			wp_die( wp_send_json_error( $response, $code ) );
+
+		// Create a new record within the GHU_TABLE_LOGS table
+		Rest_Log_Table::insert_db_record(array(
+				'status' => $status_code,
+				'time' => $this->datetime ,
+				'elapsed_time' => $response['elapsed_time'],
+				'update_resource' => $this->update_resource,
+				'webhook_source' => $response['webhook']['webhook_source'],
+		));
+
+		unset( $response['success'] ); // used only to log (wp_send_json already add it)
+
+		// Send the HTTP Response
+		switch($status_code){
+			case 200: wp_send_json_success( $response, $status_code );	break;
+			case 417: wp_send_json_error( $response, $status_code );		break;
+			default:
+				//TODO: handle other response codes
+				$response['success'] = false; // or better true?
+				wp_send_json( $response, $status_code );
+			break;
 		}
+
 	}
+
 }

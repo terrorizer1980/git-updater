@@ -125,4 +125,12 @@ class Init extends Base {
 		return $can_user_update && in_array( $pagenow, array_unique( $admin_pages ), true );
 	}
 
+	/**
+	* Runs via plugin activation hook
+	*/
+	public static function install()
+	{
+		Rest_Log_Table::update_db_table(); // create a database table ("ghu-logs")
+	}
+
 }
