@@ -34,7 +34,9 @@
     "afragen/wordpress-plugin-readme-parser": "dev-master",
     "afragen/singleton": "dev-master",
     "collizo4sky/persist-admin-notices-dismissal": "^1",
-    "composer/installers": "^1"
+    "composer/installers": "^1",
+    "league/oauth2-client": "^2.4"
+
   },
   "autoload": {
     "psr-4": {

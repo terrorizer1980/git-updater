@@ -1,4 +1,6 @@
 #### [unreleased]
+* add tab for OAuth, now to fill it
+* add `composer require league/oauth2-client`
 
 #### 9.2.4 / 2020-02-04
 * add notice re: GitHub deprecation notice 🤬
