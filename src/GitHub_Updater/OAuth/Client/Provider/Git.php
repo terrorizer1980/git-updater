@@ -9,6 +9,7 @@ use League\OAuth2\Client\Tool\ArrayAccessorTrait;
 use League\OAuth2\Client\Tool\BearerAuthorizationTrait;
 use Psr\Http\Message\ResponseInterface;
 
+// Maybe just use GenericProvider.
 class Git extends AbstractProvider
 {
     use BearerAuthorizationTrait;
