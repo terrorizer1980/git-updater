@@ -152,6 +152,9 @@ class OAuth_Settings {
 			'https://github.com/afragen/github-updater/issues/848'
 		);
 		echo '</p>';
+
+		echo '<p>Eventually buttons to get an OAuth token will be here.</p>';
+		echo '<a class="button primary-button disabled">Get OAuth Token</a>';
 	}
 
 	/**
