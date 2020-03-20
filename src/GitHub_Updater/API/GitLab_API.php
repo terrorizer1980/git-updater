@@ -60,12 +60,7 @@ class GitLab_API extends API implements API_Interface {
 			static::$options['gitlab_access_token'] = null;
 			$set_credentials                        = true;
 		}
-		if ( ! isset( static::$options['gitlab_enterprise_token'] ) ) {
-			static::$options['gitlab_enterprise_token'] = null;
-			$set_credentials                            = true;
-		}
-		if ( ( empty( static::$options['gitlab_enterprise_token'] ) &&
-			in_array( 'gitlabce', $running_servers, true ) ) ||
+		if ( in_array( 'gitlabce', $running_servers, true ) ||
 			( empty( static::$options['gitlab_access_token'] ) &&
 			in_array( 'gitlab', $running_servers, true ) )
 		) {
@@ -212,7 +207,6 @@ class GitLab_API extends API implements API_Interface {
 			$endpoint = add_query_arg( 'sha', $branch_switch, $endpoint );
 		}
 
-		$endpoint      = $this->add_access_token_endpoint( $this, $endpoint );
 		$download_link = $download_link_base . $endpoint;
 
 		/**
@@ -261,8 +255,6 @@ class GitLab_API extends API implements API_Interface {
 				break;
 		}
 
-		$endpoint = $this->add_access_token_endpoint( $git, $endpoint );
-
 		/*
 		 * If GitLab CE/Enterprise return this endpoint.
 		 */
@@ -293,7 +285,7 @@ class GitLab_API extends API implements API_Interface {
 			}
 
 			if ( $response && $this->type->slug === $response->path ) {
-				$id = $response->id;
+				// $id = $response->id;
 				$this->set_repo_cache( 'project_id', $id );
 				$this->set_repo_cache( 'project', $response );
 			}
@@ -445,7 +437,7 @@ class GitLab_API extends API implements API_Interface {
 			);
 		}
 
-		if ( $auth_required['gitlab_private'] ) {
+		if ( $auth_required['gitlab_private'] || $auth_required['gitlab_enterprise'] ) {
 			add_settings_section(
 				'gitlab_id',
 				esc_html__( 'GitLab Private Settings', 'github-updater' ),
@@ -463,20 +455,6 @@ class GitLab_API extends API implements API_Interface {
 				'gitlab_settings',
 				[
 					'id'    => 'gitlab_access_token',
-					'token' => true,
-				]
-			);
-		}
-
-		if ( $auth_required['gitlab_enterprise'] ) {
-			add_settings_field(
-				'gitlab_enterprise_token',
-				esc_html__( 'GitLab CE or GitLab Enterprise Personal Access Token', 'github-updater' ),
-				[ Singleton::get_instance( 'Settings', $this ), 'token_callback_text' ],
-				'github_updater_gitlab_install_settings',
-				'gitlab_settings',
-				[
-					'id'    => 'gitlab_enterprise_token',
 					'token' => true,
 				]
 			);
@@ -522,7 +500,7 @@ class GitLab_API extends API implements API_Interface {
 	 * Print the GitLab Access Token Settings text.
 	 */
 	public function print_section_gitlab_token() {
-		esc_html_e( 'Enter your GitLab.com, GitLab CE, or GitLab Enterprise Access Token.', 'github-updater' );
+		esc_html_e( 'Enter your GitLab.com Access Token.', 'github-updater' );
 	}
 
 	/**
@@ -568,21 +546,31 @@ class GitLab_API extends API implements API_Interface {
 	public function gitlab_error() {
 		$auth_required = $this->get_class_vars( 'Settings', 'auth_required' );
 		$error_code    = $this->get_error_codes();
+		$gitlab_error  = false;
 
-		if ( ! isset( $error_code['gitlab'] ) &&
-			( ( empty( static::$options['gitlab_enterprise_token'] ) &&
-				$auth_required['gitlab_enterprise'] ) ||
+		foreach ( $error_code as $error ) {
+			if ( 'gitlab' === $error['git'] ) {
+				$gitlab_error = true;
+				break;
+			}
+		}
+
+		if ( ( ! isset( $error_code['gitlab'] ) && $gitlab_error ) &&
+			( $auth_required['gitlab_enterprise'] ||
 			( empty( static::$options['gitlab_access_token'] ) &&
 				$auth_required['gitlab'] ) )
 		) {
-			self::$error_code['gitlab'] = [ 'error' => true ];
+			self::$error_code['gitlab'] = [
+				'git'   => 'gitlab',
+				'error' => true,
+			];
 			if ( ! \PAnD::is_admin_notice_active( 'gitlab-error-1' ) ) {
 				return;
 			}
 			?>
 			<div data-dismissible="gitlab-error-1" class="error notice is-dismissible">
 				<p>
-					<?php esc_html_e( 'You must set a GitLab.com, GitLab CE, or GitLab Enterprise Access Token.', 'github-updater' ); ?>
+					<?php esc_html_e( 'You must set a GitLab Access Token.', 'github-updater' ); ?>
 				</p>
 			</div>
 			<?php
@@ -598,9 +586,8 @@ class GitLab_API extends API implements API_Interface {
 	 * @return mixed $install
 	 */
 	public function remote_install( $headers, $install ) {
-		$gitlab_com                         = true;
-		$options['gitlab_access_token']     = isset( static::$options['gitlab_access_token'] ) ? static::$options['gitlab_access_token'] : null;
-		$options['gitlab_enterprise_token'] = isset( static::$options['gitlab_enterprise_token'] ) ? static::$options['gitlab_enterprise_token'] : null;
+		$gitlab_com                     = true;
+		$options['gitlab_access_token'] = isset( static::$options['gitlab_access_token'] ) ? static::$options['gitlab_access_token'] : null;
 
 		if ( 'gitlab.com' === $headers['host'] || empty( $headers['host'] ) ) {
 			$base            = 'https://gitlab.com';
@@ -621,29 +608,16 @@ class GitLab_API extends API implements API_Interface {
 			$install['options'][ $install['repo'] ] = $install['gitlab_access_token'];
 			if ( $gitlab_com ) {
 				$install['options']['gitlab_access_token'] = $install['gitlab_access_token'];
-			} else {
-				$install['options']['gitlab_enterprise_token'] = $install['gitlab_access_token'];
 			}
 		}
 		if ( $gitlab_com ) {
 			$token = ! empty( $install['options']['gitlab_access_token'] )
 				? $install['options']['gitlab_access_token']
 				: $options['gitlab_access_token'];
-		} else {
-			$token = ! empty( $install['options']['gitlab_enterprise_token'] )
-				? $install['options']['gitlab_enterprise_token']
-				: $options['gitlab_enterprise_token'];
-		}
-
-		if ( ! empty( $token ) ) {
-			$install['download_link'] = add_query_arg( 'private_token', $token, $install['download_link'] );
 		}
 
 		if ( ! empty( static::$options['gitlab_access_token'] ) ) {
 			unset( $install['options']['gitlab_access_token'] );
-		}
-		if ( ! empty( static::$options['gitlab_enterprise_token'] ) ) {
-			unset( $install['options']['gitlab_enterprise_token'] );
 		}
 
 		return $install;

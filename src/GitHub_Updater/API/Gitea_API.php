@@ -170,7 +170,6 @@ class Gitea_API extends API implements API_Interface {
 			$endpoint = $branch_switch . '.zip';
 		}
 
-		$endpoint      = $this->add_access_token_endpoint( $this, $endpoint );
 		$download_link = $download_link_base . $endpoint;
 
 		/**
@@ -210,8 +209,6 @@ class Gitea_API extends API implements API_Interface {
 			default:
 				break;
 		}
-
-		$endpoint = $this->add_access_token_endpoint( $git, $endpoint );
 
 		return $endpoint;
 	}
@@ -461,7 +458,10 @@ class Gitea_API extends API implements API_Interface {
 			empty( static::$options['gitea_access_token'] ) &&
 			$auth_required['gitea']
 		) {
-			self::$error_code['gitea'] = [ 'error' => true ];
+			self::$error_code['gitea'] = [
+				'git'   => 'gitea',
+				'error' => true,
+			];
 			if ( ! \PAnD::is_admin_notice_active( 'gitea-error-1' ) ) {
 				return;
 			}
@@ -501,10 +501,6 @@ class Gitea_API extends API implements API_Interface {
 		$token = ! empty( $install['options']['gitea_access_token'] )
 			? $install['options']['gitea_access_token']
 			: $options['gitea_access_token'];
-
-		if ( ! empty( $token ) ) {
-			$install['download_link'] = add_query_arg( 'access_token', $token, $install['download_link'] );
-		}
 
 		if ( ! empty( static::$options['gitea_access_token'] ) ) {
 			unset( $install['options']['gitea_access_token'] );

@@ -81,7 +81,11 @@ class Bitbucket_API extends API implements API_Interface {
 				in_array( 'bbserver', $running_servers, true ) ) )
 		) {
 			Singleton::get_instance( 'Messages', $this )->create_error_message( 'bitbucket' );
-			static::$error_code['bitbucket'] = [ 'code' => 401 ];
+
+			static::$error_code['bitbucket'] = [
+				'git'  => 'bitbucket',
+				'code' => 401,
+			];
 		}
 		if ( $set_credentials ) {
 			add_site_option( 'github_updater', static::$options );
@@ -255,8 +259,6 @@ class Bitbucket_API extends API implements API_Interface {
 			default:
 				break;
 		}
-
-		$endpoint = $this->add_access_token_endpoint( $git, $endpoint );
 
 		return $endpoint;
 	}

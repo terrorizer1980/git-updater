@@ -47,8 +47,10 @@ class Settings {
 		'github_enterprise' => false,
 		'bitbucket_private' => false,
 		'bitbucket_server'  => false,
+		'gitlab'            => true,
 		'gitlab_private'    => false,
 		'gitlab_enterprise' => false,
+		'gitea'             => true,
 		'gitea_private'     => false,
 	];
 
@@ -189,7 +191,7 @@ class Settings {
 	 */
 	public function add_plugin_page() {
 		$parent     = is_multisite() ? 'settings.php' : 'options-general.php';
-		$capability = is_multisite() ? 'manage_network' : 'manage_options';
+		$capability = is_multisite() ? 'manage_network_options' : 'manage_options';
 
 		add_submenu_page(
 			$parent,
@@ -238,7 +240,6 @@ class Settings {
 	 * Options page callback.
 	 */
 	public function create_admin_page() {
-		$this->github_token_deprecation();
 		$action = is_multisite() ? 'edit.php?action=github-updater' : 'options.php';
 		$tab    = isset( $_GET['tab'] ) ? esc_attr( $_GET['tab'] ) : 'github_updater_settings';
 		$subtab = isset( $_GET['subtab'] ) ? esc_attr( $_GET['subtab'] ) : 'github_updater';
@@ -450,7 +451,6 @@ class Settings {
 			'branch_switch',
 			'bypass_background_processing',
 			'github_access_token',
-			'github_enterprise_token',
 		];
 
 		if ( in_array( 'bitbucket', $running_servers, true ) ) {
@@ -482,10 +482,8 @@ class Settings {
 
 		$auth_required       = static::$auth_required;
 		$auth_required_unset = [
-			'github_enterprise' => 'github_enterprise_token',
-			'gitlab'            => 'gitlab_access_token',
-			'gitlab_enterprise' => 'gitlab_enterprise_token',
-			'gitea'             => 'gitea_access_token',
+			'gitlab' => 'gitlab_access_token',
+			'gitea'  => 'gitea_access_token',
 		];
 
 		array_map(
@@ -551,10 +549,6 @@ class Settings {
 			static::$auth_required['gitea_private']     = static::$auth_required['gitea_private']
 				?: 'gitea' === $token->git;
 		}
-
-		// Always set to true.
-		static::$auth_required['gitlab'] = true;
-		static::$auth_required['gitea']  = true;
 	}
 
 	/**
@@ -757,7 +751,7 @@ class Settings {
 		$settings_page = is_multisite() ? 'settings.php' : 'options-general.php';
 		$link          = [ '<a href="' . esc_url( network_admin_url( $settings_page ) ) . '?page=github-updater">' . esc_html__( 'Settings', 'github-updater' ) . '</a>' ];
 
-		return array_merge( $links, $link );
+		return array_merge( $link, $links );
 	}
 
 	/**
@@ -839,21 +833,5 @@ class Settings {
 			$is_dot_org = $data['dot_org'] && ! $override ? $dot_org : null;
 			printf( '<p>' . $dashicon . $data['name'] . $is_private . $is_dot_org . $is_broken . '</p>' );
 		}
-	}
-
-	/** GitHub access token deprecation notice */
-	public function github_token_deprecation() {
-		?>
-		<div class="notice-error notice is-dismissible">
-			<p>
-				<?php
-				printf(
-					'<p>GitHub.com has recently started issuing deprecation notices for the use of access tokens with the GitHub API. This clearly affects the GitHub Updater plugin. I am sorry that you might be inundated with emails. I am working on a solution for OAuth authetication that should resolve this. Please be patient.</p><p>If you would like to help please work is being done on <a href="%s">issue #848</a></p>',
-					'https://github.com/afragen/github-updater/issues/848'
-				);
-				?>
-			</p>
-		</div>
-		<?php
 	}
 }

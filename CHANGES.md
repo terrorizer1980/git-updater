@@ -1,6 +1,28 @@
 #### [unreleased]
+* set `minimum-stability: dev` in composer.json, helps with dependency loading for `dev-master`
+* fix potential PHP warning in `Basic_Auth_Loader::get_slug_for_credentials()` when installer, like TGMPA, passes as array and not string
+* define `$error_code[{git}]['git']` for certain errors to avoid PHP undefined index warning
+* update calls for Bitbucket Server REST API v7, thanks @Idealien
+* explicitly ignore themes without a root `style.css` file to avoid PHP warnings, thanks @cliffordp
+* move `Settings` action link to front
 * add tab for OAuth, now to fill it
 * add `composer require league/oauth2-client`
+
+#### 9.3.2 / 2020-02-19
+* fixed some PHP warnings and 401 errors when access tokens not set in `Basic_Auth_Loader`
+* allow URL to a git host API to add header during installation
+* removed saving and use of Enterprise Access Tokens, must use individual repo tokens
+* use `PRIVATE-TOKEN: <token>` header for authentication in GitLab < v12.2
+
+#### 9.3.1 / 2020-02-09
+* try to ensure authentication headers aren't injected where they shouldn't be, bad Andy 🤦‍♂️
+
+#### 9.3.0 / 2020-02-06
+* remove GitHub deprecation notice
+* transition from GitHub access token query arg to Basic Authentication
+* fixed theme update View details display [#849](https://github.com/afragen/github-updater/issues/849)
+* more fixes PHP 7.4 warnings
+* refactor from using access token endpoints to Basic Authentication headers
 
 #### 9.2.4 / 2020-02-04
 * add notice re: GitHub deprecation notice 🤬

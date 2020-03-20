@@ -155,7 +155,6 @@ class GitHub_API extends API implements API_Interface {
 			$endpoint = $branch_switch;
 		}
 
-		$endpoint      = $this->add_access_token_endpoint( $this, $endpoint );
 		$download_link = $download_link_base . $endpoint;
 
 		/**
@@ -198,8 +197,6 @@ class GitHub_API extends API implements API_Interface {
 			default:
 				break;
 		}
-
-		$endpoint = $this->add_access_token_endpoint( $git, $endpoint );
 
 		/*
 		 * If GitHub Enterprise return this endpoint.
@@ -387,20 +384,6 @@ class GitHub_API extends API implements API_Interface {
 			]
 		);
 
-		if ( $auth_required['github_enterprise'] ) {
-			add_settings_field(
-				'github_enterprise_token',
-				esc_html__( 'GitHub Enterprise Access Token', 'github-updater' ),
-				[ Singleton::get_instance( 'Settings', $this ), 'token_callback_text' ],
-				'github_updater_github_install_settings',
-				'github_access_token',
-				[
-					'id'    => 'github_enterprise_token',
-					'token' => true,
-				]
-			);
-		}
-
 		/*
 		 * Show section for private GitHub repositories.
 		 */
@@ -495,9 +478,8 @@ class GitHub_API extends API implements API_Interface {
 	 * @return mixed
 	 */
 	public function remote_install( $headers, $install ) {
-		$github_com                         = true;
-		$options['github_access_token']     = isset( static::$options['github_access_token'] ) ? static::$options['github_access_token'] : null;
-		$options['github_enterprise_token'] = isset( static::$options['github_enterprise_token'] ) ? static::$options['github_enterprise_token'] : null;
+		$github_com                     = true;
+		$options['github_access_token'] = isset( static::$options['github_access_token'] ) ? static::$options['github_access_token'] : null;
 
 		if ( 'github.com' === $headers['host'] || empty( $headers['host'] ) ) {
 			$base            = 'https://api.github.com';
@@ -521,29 +503,16 @@ class GitHub_API extends API implements API_Interface {
 			$install['options'][ $install['repo'] ] = $install['github_access_token'];
 			if ( $github_com ) {
 				$install['options']['github_access_token'] = $install['github_access_token'];
-			} else {
-				$install['options']['github_enterprise_token'] = $install['github_access_token'];
 			}
 		}
 		if ( $github_com ) {
 			$token = ! empty( $install['options']['github_access_token'] )
 				? $install['options']['github_access_token']
 				: $options['github_access_token'];
-		} else {
-			$token = ! empty( $install['options']['github_enterprise_token'] )
-				? $install['options']['github_enterprise_token']
-				: $options['github_enterprise_token'];
-		}
-
-		if ( ! empty( $token ) ) {
-			$install['download_link'] = add_query_arg( 'access_token', $token, $install['download_link'] );
 		}
 
 		if ( ! empty( static::$options['github_access_token'] ) ) {
 			unset( $install['options']['github_access_token'] );
-		}
-		if ( ! empty( static::$options['github_enterprise_token'] ) ) {
-			unset( $install['options']['github_enterprise_token'] );
 		}
 
 		return $install;
