@@ -4,12 +4,12 @@
 
 //use Psr\Http\Message\ResponseInterface;
 
-namespace Fragen\GitHub_Updater\OAuth\Client\Provider\GitHub\Exception;
+namespace Fragen\GitHub_Updater\OAuth\Client\Provider\Git\Exception;
 
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use Psr\Http\Message\ResponseInterface;
 
-class GithubIdentityProviderException extends IdentityProviderException
+class GitIdentityProviderException extends IdentityProviderException
 {
     /**
      * Creates client exception from response.
