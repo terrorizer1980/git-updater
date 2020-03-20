@@ -136,7 +136,7 @@ class Base {
 			Singleton::get_instance( 'Init', $this )->can_update()
 		) {
 			Singleton::get_instance( 'Settings', $this )->run();
-			Singleton::get_instance( 'OAuth', $this )->run();
+			Singleton::get_instance( 'OAuth_Settings', $this )->run();
 		}
 
 		// Run GitHub Updater upgrade functions.

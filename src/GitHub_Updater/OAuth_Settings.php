@@ -15,7 +15,7 @@ use Fragen\GitHub_Updater\Traits\GHU_Trait;
 /**
  * Class Remote_Management
  */
-class OAuth {
+class OAuth_Settings {
 	use GHU_Trait;
 
 
@@ -74,7 +74,7 @@ class OAuth {
 	 * Adds Remote Management tab to Settings page.
 	 */
 	public function add_settings_tabs() {
-		$install_tabs = [ 'github_updater_oauth' => esc_html__( 'OAuth', 'github-updater' ) ];
+		$install_tabs = [ 'github_updater_oauth_settings' => esc_html__( 'OAuth Settings', 'github-updater' ) ];
 		add_filter(
 			'github_updater_add_settings_tabs',
 			function ( $tabs ) use ( $install_tabs ) {
@@ -101,7 +101,7 @@ class OAuth {
 	 * @param string $action Form action.
 	 */
 	public function add_admin_page( $tab, $action ) {
-		if ( 'github_updater_oauth' === $tab ) {
+		if ( 'github_updater_oauth_settings' === $tab ) {
 			$action = add_query_arg( 'tab', $tab, $action );
 			?>
 			<form class="settings" method="post" action="<?php esc_attr_e( $action ); ?>">
@@ -121,15 +121,15 @@ class OAuth {
 	 */
 	public function oauth_page_init() {
 		register_setting(
-			'github_updater_oauth',
+			'github_updater_oauth_settings',
 			'github_updater_oauth_settings',
 			[ $this, 'sanitize' ]
 		);
 
 		add_settings_section(
 			'oauth_settings',
-			esc_html__( 'OAuth', 'github-updater' ),
-			[ $this, 'print_section_oauth' ],
+			esc_html__( 'OAuth Settings', 'github-updater' ),
+			[ $this, 'print_section_oauth_settings' ],
 			'github_updater_oauth_settings'
 		);
 	}
@@ -137,7 +137,7 @@ class OAuth {
 	/**
 	 * Print the OAuth text.
 	 */
-	public function print_section_oauth() {
+	public function print_section_oauth_settings() {
 
 		echo '<p>';
 		esc_html_e( 'GitHub has recently deprecated the use of access tokens with their API. This is causing users to be inundated with emails describing this issue. I am aware and working on a solution.', 'github-updater' );
