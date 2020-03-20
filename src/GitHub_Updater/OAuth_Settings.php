@@ -11,13 +11,13 @@
 namespace Fragen\GitHub_Updater;
 
 use Fragen\GitHub_Updater\Traits\GHU_Trait;
+use Fragen\GitHub_Updater\OAuth\Client\Provider\Git;
 
 /**
  * Class Remote_Management
  */
 class OAuth_Settings {
 	use GHU_Trait;
-
 
 	/**
 	 * Remote_Management constructor.
@@ -53,18 +53,18 @@ class OAuth_Settings {
 	 */
 	public function save_settings( $post_data ) {
 		if ( isset( $post_data['option_page'] ) &&
-		'github_updater_remote_management' === $post_data['option_page']
+		'github_updater_oauth_settings' === $post_data['option_page']
 		) {
-			$options = isset( $post_data['github_updater_remote_management'] )
-			? $post_data['github_updater_remote_management']
+			$options = isset( $post_data['github_updater_oauth_settings'] )
+			? $post_data['github_updater_oauth_settings']
 			: [];
 
-			update_site_option( 'github_updater_remote_management', (array) $this->sanitize( $options ) );
+			update_site_option( 'github_updater_oauth_settings', (array) $this->sanitize( $options ) );
 
 			add_filter(
 				'github_updater_save_redirect',
 				function ( $option_page ) {
-					return array_merge( $option_page, [ 'github_updater_remote_management' ] );
+					return array_merge( $option_page, [ 'github_updater_oauth_settings' ] );
 				}
 			);
 		}
@@ -152,7 +152,6 @@ class OAuth_Settings {
 			'https://github.com/afragen/github-updater/issues/848'
 		);
 		echo '</p>';
-
 	}
 
 	/**
@@ -173,4 +172,51 @@ class OAuth_Settings {
 		<?php
 	}
 
+	public function get_oauth_token() {
+		$provider = new Git(
+			[
+				'clientId'     => '{github-client-id}',
+				'clientSecret' => '{github-client-secret}',
+				'redirectUri'  => home_url() . $_SERVER['REQUEST_URI'],
+			]
+		);
+
+		if ( ! isset( $_GET['code'] ) ) {
+
+			// If we don't have an authorization code then get one
+			$authUrl                 = $provider->getAuthorizationUrl();
+			$_SESSION['oauth2state'] = $provider->getState();
+			header( 'Location: ' . $authUrl );
+			exit;
+
+			// Check given state against previously stored one to mitigate CSRF attack
+		} elseif ( empty( $_GET['state'] ) || ( $_GET['state'] !== $_SESSION['oauth2state'] ) ) {
+
+			unset( $_SESSION['oauth2state'] );
+			exit( 'Invalid state' );
+
+		} else {
+
+			// Try to get an access token (using the authorization code grant)
+			$token = $provider->getAccessToken( 'authorization_code', [ 'code' => $_GET['code'] ] );
+
+			// Optional: Now you have a token you can look up a users profile data
+			try {
+
+				// We got an access token, let's now get the user's details
+				$user = $provider->getResourceOwner( $token );
+
+				// Use these details to create a new profile
+				printf( 'Hello %s!', $user->getNickname() );
+
+			} catch ( \Exception $e ) {
+
+				// Failed to get user details
+				exit( 'Oh dear...' );
+			}
+
+			// Use this to interact with an API on the users behalf
+			echo $token->getToken();
+		}
+	}
 }

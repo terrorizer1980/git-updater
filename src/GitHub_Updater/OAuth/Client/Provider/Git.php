@@ -15,6 +15,15 @@ use Psr\Http\Message\ResponseInterface;
 class Git extends AbstractProvider {
 	use BearerAuthorizationTrait;
 
+    private $githubClientID     = 'dcd540bdef714cc66b85';
+    private $githubClientSecret = 'dda9b974507de454a41c84841a4512cdb6378f56';
+
+    private $bitbucketClientID = 'VxtSLKyuDAe46eR54C';
+    private $bitbucketClientSecret = 'ysSTGnn86Up2VAugH68hxEEmCWqn6dg9';
+
+    private $gitlabClientID = 'de0cd8b159615595d573a14b95da80edfa3a3e3688557d0976489412ae1e77f6';
+    private $gitlabClientSecret = '6568c2f607524fead4711b8a5c72c0b7c7de3abbd7ca18a32ef32414c7a7ab55';
+
 	/** Domain.  @var string */
 	public $domain = 'https://github.com';
 
@@ -31,22 +40,28 @@ class Git extends AbstractProvider {
 	public $urlLogin = '/login/oauth/access_token';
 
 	/** Token Scopes. @var array */
-	public $scopes;
+	public $defaultScopes;
+
+	/** Scope Separtor @var string */
+	public $scopeSeparator;
 
 	/** Self Installation of git server. @var bool */
 	public $selfInstall;
 
-    /**
-     * Constructor.
-     */
+	/**
+	 * Constructor.
+	 *
+	 * Default is for GitHub.
+	 */
 	public function __construct( array $config ) {
-		$this->domain       = isset( $config['domain'] ) ? $config['domain'] : $this->domain;
-		$this->apiDomain    = isset( $config['apiDomain'] ) ? $config['apiDomain'] : $this->apiDomain;
-		$this->urlAuthorize = isset( $config['urlAuthorize'] ) ? $config['urlAuthorize'] : $this->urlAuthorize;
-		$this->urlLogin     = isset( $config['urlLogin'] ) ? $config['urlLogin'] : $this->urlLogin;
-		$this->apiUser      = isset( $config['apiUser'] ) ? $config['apiUser'] : $this->apiUser;
-		$this->scopes       = isset( $config['scopes'] ) ? $config['scopes'] : [];
-		$this->selfInstall  = isset( $config['selfInstall'] ) ? $config['selfInstall'] : false;
+		$this->domain         = isset( $config['domain'] ) ? $config['domain'] : $this->domain;
+		$this->apiDomain      = isset( $config['apiDomain'] ) ? $config['apiDomain'] : $this->apiDomain;
+		$this->urlAuthorize   = isset( $config['urlAuthorize'] ) ? $config['urlAuthorize'] : $this->urlAuthorize;
+		$this->urlLogin       = isset( $config['urlLogin'] ) ? $config['urlLogin'] : $this->urlLogin;
+		$this->apiUser        = isset( $config['apiUser'] ) ? $config['apiUser'] : $this->apiUser;
+		$this->defaultScopes  = isset( $config['defaultScopes'] ) ? $config['defaultScopes'] : ['repo'];
+		$this->scopeSeparator = isset( $config['scopeSeparator'] ) ? $config['scopeSeparator'] : ' ';
+		$this->selfInstall    = isset( $config['selfInstall'] ) ? $config['selfInstall'] : false;
 	}
 
 	/**
@@ -91,7 +106,17 @@ class Git extends AbstractProvider {
 	 * @return array
 	 */
 	protected function getDefaultScopes() {
-		return $this->scopes;
+		return $this->defaultScopes;
+	}
+
+	/**
+	 * Returns the string that should be used to separate scopes when building
+	 * the URL for requesting an access token.
+	 *
+	 * @return string Scope separator, defaults to ','
+	 */
+	protected function getScopeSeparator() {
+		return $this->scopeSeparator;
 	}
 
 	/**
