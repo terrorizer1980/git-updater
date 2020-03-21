@@ -34,17 +34,17 @@ class OAuth_Settings {
 	 */
 	public function load_hooks() {
 		add_action( 'admin_init', [ $this, 'oauth_page_init' ] );
-		// add_action(
-		// 'github_updater_update_settings',
-		// function ( $post_data ) {
-		// $this->save_settings( $post_data );
-		// }
-		// );
+		add_action(
+			'github_updater_update_settings',
+			function ( $post_data ) {
+				$this->save_settings( $post_data );
+			}
+		);
 		$this->add_settings_tabs();
 	}
 
 	/**
-	 * Save Remote Management settings.
+	 * Save OAuth settings.
 	 *
 	 * @uses 'github_updater_update_settings' action hook
 	 * @uses 'github_updater_save_redirect' filter hook
@@ -67,6 +67,10 @@ class OAuth_Settings {
 					return array_merge( $option_page, [ 'github_updater_oauth_settings' ] );
 				}
 			);
+		}
+		if ( isset( $post_data['submit'] ) && false !== stripos( $post_data['submit'], 'github' ) ) {
+			ob_start();
+			$this->get_oauth_token( 'github' );
 		}
 	}
 
@@ -102,8 +106,7 @@ class OAuth_Settings {
 	 */
 	public function add_admin_page( $tab, $action ) {
 		if ( 'github_updater_oauth_settings' === $tab ) {
-			$action = add_query_arg( 'tab', $tab, $action );
-			?>
+			$action = add_query_arg( 'tab', $tab, $action ); ?>
 			<form class="settings" method="post" action="<?php esc_attr_e( $action ); ?>">
 			<?php
 			// phpcs:ignore Squiz.Commenting.InlineComment.InvalidEndChar
@@ -111,7 +114,7 @@ class OAuth_Settings {
 			do_settings_sections( 'github_updater_oauth_settings' );
 			// phpcs:ignore Squiz.Commenting.InlineComment.InvalidEndChar
 			// submit_button();
-
+			submit_button( 'Get GitHub OAuth Token' );
 			echo '</form>';
 		}
 	}
@@ -138,7 +141,6 @@ class OAuth_Settings {
 	 * Print the OAuth text.
 	 */
 	public function print_section_oauth_settings() {
-
 		echo '<p>';
 		esc_html_e( 'GitHub has recently deprecated the use of access tokens with their API. This is causing users to be inundated with emails describing this issue. I am aware and working on a solution.', 'github-updater' );
 		echo '</p>';
@@ -154,7 +156,6 @@ class OAuth_Settings {
 		echo '</p>';
 
 		echo '<p>Eventually buttons to get an OAuth token will be here.</p>';
-		echo '<a class="button primary-button disabled">Get OAuth Token</a>';
 	}
 
 	/**
@@ -175,45 +176,40 @@ class OAuth_Settings {
 		<?php
 	}
 
-	public function get_oauth_token() {
+	public function get_oauth_token( $arg ) {
 		$provider = new Git(
 			[
-				'clientId'     => '{github-client-id}',
-				'clientSecret' => '{github-client-secret}',
-				'redirectUri'  => home_url() . $_SERVER['REQUEST_URI'],
+				'git' => $arg,
+				'redirectUri' => home_url() . $_SERVER['REQUEST_URI'],
 			]
 		);
+		$test = parse_url( 'https://github.com/afragen/github-updater?code=d1880ae2fd23bc3da6fb&state=25b5135f9d9b65fafd3985a25c4d42c2' );
 
 		if ( ! isset( $_GET['code'] ) ) {
-
 			// If we don't have an authorization code then get one
 			$authUrl                 = $provider->getAuthorizationUrl();
 			$_SESSION['oauth2state'] = $provider->getState();
+
+			\ob_flush();
 			header( 'Location: ' . $authUrl );
 			exit;
 
 			// Check given state against previously stored one to mitigate CSRF attack
 		} elseif ( empty( $_GET['state'] ) || ( $_GET['state'] !== $_SESSION['oauth2state'] ) ) {
-
 			unset( $_SESSION['oauth2state'] );
 			exit( 'Invalid state' );
-
 		} else {
-
 			// Try to get an access token (using the authorization code grant)
 			$token = $provider->getAccessToken( 'authorization_code', [ 'code' => $_GET['code'] ] );
 
 			// Optional: Now you have a token you can look up a users profile data
 			try {
-
 				// We got an access token, let's now get the user's details
 				$user = $provider->getResourceOwner( $token );
 
 				// Use these details to create a new profile
 				printf( 'Hello %s!', $user->getNickname() );
-
 			} catch ( \Exception $e ) {
-
 				// Failed to get user details
 				exit( 'Oh dear...' );
 			}

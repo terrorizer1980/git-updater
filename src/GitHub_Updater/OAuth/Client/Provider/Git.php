@@ -33,6 +33,8 @@ class Git extends AbstractProvider {
 	/** API route. @var string */
 	public $apiRoute = '/api/v3';
 
+	public $apiUser = '/user';
+
 	/** Authorize URL. @var string */
 	public $urlAuthorize = '/login/oauth/authorize';
 
@@ -48,12 +50,30 @@ class Git extends AbstractProvider {
 	/** Self Installation of git server. @var bool */
 	public $selfInstall;
 
+	public $clientId;
+	public $clientSecret;
+	public $redirectUri;
 	/**
 	 * Constructor.
 	 *
 	 * Default is for GitHub.
 	 */
 	public function __construct( array $config ) {
+		switch($config['git']){
+			case 'github':
+				$this->clientId = $this->githubClientID;
+				$this->clientSecret = $this->githubClientSecret;
+				break;
+			case 'bitbucket':
+				$this->clientd = $this->bitbucketClientID;
+				$this->clientSecret = $this->bitbucketClientSecret;
+				break;
+			case 'gitlab':
+			$this->clientId = $this->gitlabClientID;
+			$this->clientSecret = $this->gitlabClientSecret;
+			break;
+		}
+		$this->redirectUri = isset($config['redirectUri'])?$config['redirectUri']:$this->redirectUri;
 		$this->domain         = isset( $config['domain'] ) ? $config['domain'] : $this->domain;
 		$this->apiDomain      = isset( $config['apiDomain'] ) ? $config['apiDomain'] : $this->apiDomain;
 		$this->urlAuthorize   = isset( $config['urlAuthorize'] ) ? $config['urlAuthorize'] : $this->urlAuthorize;
