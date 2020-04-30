@@ -1,12 +1,41 @@
 #### [unreleased]
+* add tab for OAuth, now to fill it
+* add `composer require league/oauth2-client`
+* test `Readme_Parser::__construct()` `file_put_contents()` with additional test for success, hopefully squashes [#704](https://github.com/afragen/github-updater/issues/704) once and for all
+* prevent error if no credentials are set
+* un-screwup Bitbucket Server, sorry @allrite, fixes [#872](https://github.com/afragen/github-updater/issues/872)
+
+#### 9.5.0 / 2020-04-17
+* allow for repos using release assets to have branch switcher
+* switching away from `master` or tag will use that branch for updating, not the release asset
+* update to JS to work with IE11, thanks @sharevb, arrow functions not supported in IE11
+* removed filter `github_updater_hide_branch_switcher` in favor of better branch switching
+* direct injection of authentication headers into `wp_remote_get()`
+* filter added for adding authentication headers for downloads packages
+* don't try to check the `is_private` status for GitHub release assets. All are stored on AWS anyway and occasionally the `is_private` status will not have been set resulting in an incorrect cached value
+* limit rollback to current tag only, effectively a re-install of current tag
+
+#### 9.4.2 / 2020-04-10 -HotFix 2-
+* fixed problem with incorrectly sanitizing remote install URI fragment
+
+#### 9.4.1 / 2020-04-04 -HotFix-
+* fixed problem with sanitizing
+
+#### 9.4.0 / 2020-04-04
 * set `minimum-stability: dev` in composer.json, helps with dependency loading for `dev-master`
 * fix potential PHP warning in `Basic_Auth_Loader::get_slug_for_credentials()` when installer, like TGMPA, passes as array and not string
 * define `$error_code[{git}]['git']` for certain errors to avoid PHP undefined index warning
 * update calls for Bitbucket Server REST API v7, thanks @Idealien
 * explicitly ignore themes without a root `style.css` file to avoid PHP warnings, thanks @cliffordp
 * move `Settings` action link to front
-* add tab for OAuth, now to fill it
-* add `composer require league/oauth2-client`
+* add Bitbucket pseudo-token, `username:password` for some private repos
+* Bitbucket credentials will automatically be converted to pseudo-tokens
+* update WP-CLI integration for Bitbucket pseudo-token
+* add plugins without updates to `$transient->no_update` to add _View details_ link, thanks @robincornett
+* no longer need to test if private repo when sending auth headers, auth headers are always sent
+* lots of escaping/sanitization/phpcs ignoring
+* added filter `github_updater_hide_branch_switcher` to hide branch switcher
+* added dependency check for composer's autoloader
 
 #### 9.3.2 / 2020-02-19
 * fixed some PHP warnings and 401 errors when access tokens not set in `Basic_Auth_Loader`

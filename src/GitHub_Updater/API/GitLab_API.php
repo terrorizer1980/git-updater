@@ -60,9 +60,9 @@ class GitLab_API extends API implements API_Interface {
 			static::$options['gitlab_access_token'] = null;
 			$set_credentials                        = true;
 		}
-		if ( in_array( 'gitlabce', $running_servers, true ) ||
-			( empty( static::$options['gitlab_access_token'] ) &&
-			in_array( 'gitlab', $running_servers, true ) )
+		if ( in_array( 'gitlabce', $running_servers, true )
+			|| ( empty( static::$options['gitlab_access_token'] )
+			&& in_array( 'gitlab', $running_servers, true ) )
 		) {
 			$this->gitlab_error_notices();
 		}
@@ -186,12 +186,11 @@ class GitLab_API extends API implements API_Interface {
 		self::$method       = 'download_link';
 		$download_link_base = $this->get_api_url( "/projects/{$this->get_gitlab_id()}/repository/archive.zip" );
 		$download_link_base = remove_query_arg( 'private_token', $download_link_base );
-
-		$endpoint = '';
-		$endpoint = add_query_arg( 'sha', $this->type->branch, $endpoint );
+		$endpoint           = '';
+		$endpoint           = add_query_arg( 'sha', $this->type->branch, $endpoint );
 
 		// Release asset.
-		if ( $this->type->ci_job && '0.0.0' !== $this->type->newest_tag ) {
+		if ( $this->use_release_asset( $branch_switch ) ) {
 			$release_asset = $this->get_release_asset();
 
 			return $release_asset;
@@ -285,6 +284,7 @@ class GitLab_API extends API implements API_Interface {
 			}
 
 			if ( $response && $this->type->slug === $response->path ) {
+				// phpcs:ignore Squiz.PHP.CommentedOutCode.Found
 				// $id = $response->id;
 				$this->set_repo_cache( 'project_id', $id );
 				$this->set_repo_cache( 'project', $response );
@@ -555,10 +555,10 @@ class GitLab_API extends API implements API_Interface {
 			}
 		}
 
-		if ( ( ! isset( $error_code['gitlab'] ) && $gitlab_error ) &&
-			( $auth_required['gitlab_enterprise'] ||
-			( empty( static::$options['gitlab_access_token'] ) &&
-				$auth_required['gitlab'] ) )
+		if ( ( ! isset( $error_code['gitlab'] ) && $gitlab_error )
+			&& ( $auth_required['gitlab_enterprise']
+			|| ( empty( static::$options['gitlab_access_token'] )
+				&& $auth_required['gitlab'] ) )
 		) {
 			self::$error_code['gitlab'] = [
 				'git'   => 'gitlab',

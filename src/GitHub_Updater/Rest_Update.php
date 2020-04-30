@@ -68,8 +68,8 @@ class Rest_Update {
 	/**
 	 * Update plugin.
 	 *
-	 * @param string $plugin_slug
-	 * @param string $tag
+	 * @param string $plugin_slug Plugin slug.
+	 * @param string $tag         Plugin tag/branch.
 	 *
 	 * @throws \UnexpectedValueException Plugin not found or not updatable.
 	 */
@@ -120,6 +120,9 @@ class Rest_Update {
 			}
 		);
 
+		// Add authentication header to download package.
+		add_filter( 'http_request_args', [ Singleton::get_instance( 'API', $this ), 'download_package' ], 15, 2 );
+
 		$upgrader = new \Plugin_Upgrader( $this->upgrader_skin );
 		$upgrader->upgrade( $plugin->file );
 
@@ -134,8 +137,8 @@ class Rest_Update {
 	/**
 	 * Update a single theme.
 	 *
-	 * @param string $theme_slug
-	 * @param string $tag
+	 * @param string $theme_slug Theme slug.
+	 * @param string $tag        Theme tag/branch.
 	 *
 	 * @throws \UnexpectedValueException Theme not found or not updatable.
 	 */
@@ -180,6 +183,9 @@ class Rest_Update {
 			}
 		);
 
+		// Add authentication header to download package.
+		add_filter( 'http_request_args', [ Singleton::get_instance( 'API', $this ), 'download_package' ], 15, 2 );
+
 		$upgrader = new \Theme_Upgrader( $this->upgrader_skin );
 		$upgrader->upgrade( $theme->slug );
 	}
@@ -216,8 +222,8 @@ class Rest_Update {
 
 		$start = microtime( true );
 		try {
-			if ( ! $key ||
-				get_site_option( 'github_updater_api_key' ) !== $key
+			if ( ! $key
+				|| get_site_option( 'github_updater_api_key' ) !== $key
 			) {
 				throw new \UnexpectedValueException( 'Bad API key.' );
 			}
@@ -331,7 +337,7 @@ class Rest_Update {
 	 * Returns the current branch of the local repository referenced in the webhook.
 	 *
 	 * @param string|bool $plugin Plugin slug or false.
-	 * @param string|bool $themes Theme slug or false.
+	 * @param string|bool $theme  Theme slug or false.
 	 *
 	 * @return string $current_branch Default return is 'master'.
 	 */
@@ -379,15 +385,16 @@ class Rest_Update {
 	/**
 	 * Append $response to debug.log and wp_die().
 	 *
-	 * @param array $response
-	 * @param int   $code
-	 *
 	 * 128 == JSON_PRETTY_PRINT
 	 * 64 == JSON_UNESCAPED_SLASHES
+	 *
+	 * @param array $response Response array.
+	 * @param int   $code     Response code.
 	 */
 	private function log_exit( $response, $code ) {
 		$json_encode_flags = 128 | 64;
 
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		error_log( json_encode( $response, $json_encode_flags ) );
 
 		/**
@@ -401,10 +408,12 @@ class Rest_Update {
 		do_action( 'github_updater_post_rest_process_request', $response, $code );
 
 		unset( $response['success'] );
+		// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
 		if ( 200 === $code ) {
 			wp_die( wp_send_json_success( $response, $code ) );
 		} else {
 			wp_die( wp_send_json_error( $response, $code ) );
 		}
+		// phpcs:enable
 	}
 }

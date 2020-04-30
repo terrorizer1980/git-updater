@@ -132,8 +132,8 @@ class Base {
 	 * @return bool
 	 */
 	public function load() {
-		if ( ! apply_filters( 'github_updater_hide_settings', false ) &&
-			Singleton::get_instance( 'Init', $this )->can_update()
+		if ( ! apply_filters( 'github_updater_hide_settings', false )
+			&& Singleton::get_instance( 'Init', $this )->can_update()
 		) {
 			Singleton::get_instance( 'Settings', $this )->run();
 			Singleton::get_instance( 'OAuth_Settings', $this )->run();
@@ -154,6 +154,7 @@ class Base {
 			);
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['ghu_refresh_cache'] ) ) {
 			/**
 			 * Fires later in cycle when Refreshing Cache.
@@ -253,7 +254,7 @@ class Base {
 	/**
 	 * Runs on wp-cron job to get remote repo meta in background.
 	 *
-	 * @param array $batches
+	 * @param array $batches Cron event args, array of repo objects.
 	 */
 	public function run_cron_batch( array $batches ) {
 		foreach ( $batches as $repo ) {
@@ -265,7 +266,7 @@ class Base {
 	 * Get remote repo meta data for plugins or themes.
 	 * Calls remote APIs for data.
 	 *
-	 * @param \stdClass $repo
+	 * @param \stdClass $repo Repo object.
 	 *
 	 * @return bool
 	 */
@@ -314,7 +315,7 @@ class Base {
 	/**
 	 * Set default values for plugin/theme.
 	 *
-	 * @param string $type
+	 * @param string $type (plugin|theme).
 	 */
 	protected function set_defaults( $type ) {
 		if ( ! isset( self::$options['branch_switch'] ) ) {
@@ -355,7 +356,7 @@ class Base {
 	/**
 	 * Get filename of changelog and return.
 	 *
-	 * @param \stdClass $repo
+	 * @param \stdClass $repo Repo object.
 	 *
 	 * @return bool|string
 	 */
@@ -420,9 +421,8 @@ class Base {
 
 		$repo = $this->get_repo_slugs( $slug, $upgrader_object );
 
-		/*
-		 * Not GitHub Updater plugin/theme.
-		 */
+		// Not GitHub Updater plugin/theme.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( ! isset( $_POST['github_updater_repo'] ) && empty( $repo ) ) {
 			return $source;
 		}
@@ -477,14 +477,15 @@ class Base {
 	 * Update transient for rollback or branch switch.
 	 *
 	 * @param string    $type          plugin|theme.
-	 * @param \stdClass $repo
+	 * @param \stdClass $repo          Repo object.
 	 * @param bool      $set_transient Default false, if true then set update transient.
 	 *
 	 * @return array $rollback Rollback transient.
 	 */
 	public function set_rollback_transient( $type, $repo, $set_transient = false ) {
-		$repo_api      = Singleton::get_instance( 'API', $this )->get_repo_api( $repo->git, $repo );
-		$this->tag     = isset( $_GET['rollback'] ) ? $_GET['rollback'] : false;
+		$repo_api = Singleton::get_instance( 'API', $this )->get_repo_api( $repo->git, $repo );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$this->tag     = isset( $_GET['rollback'] ) ? sanitize_text_field( wp_unslash( $_GET['rollback'] ) ) : false;
 		$slug          = 'plugin' === $type ? $repo->file : $repo->slug;
 		$download_link = $repo_api->construct_download_link( $this->tag );
 
@@ -526,9 +527,9 @@ class Base {
 	/**
 	 * Return correct update row opening and closing tags for Shiny Updates.
 	 *
-	 * @param string $repo_name
+	 * @param string $repo_name       Repo name.
 	 * @param string $type            plugin|theme.
-	 * @param bool   $branch_switcher
+	 * @param bool   $branch_switcher Boolean for using branch switcher, default is false.
 	 *
 	 * @return array
 	 */
@@ -581,18 +582,22 @@ class Base {
 		printf(
 			/* translators: 1: branch name, 2: jQuery dropdown, 3: closing tag */
 			esc_html__( 'Current branch is `%1$s`, try %2$sanother version%3$s', 'github-updater' ),
-			$data['branch'],
-			'<a href="#" onclick="jQuery(\'#' . $data['id'] . '\').toggle();return false;">',
+			esc_attr( $data['branch'] ),
+			'<a href="#" onclick="jQuery(\'#' . esc_attr( $data['id'] ) . '\').toggle();return false;">',
 			'</a>.'
 		);
 
-		print '<ul id="' . $data['id'] . '" style="display:none; width: 100%;">';
+		print '<ul id="' . esc_attr( $data['id'] ) . '" style="display:none; width: 100%;">';
 
+		// Disable branch switching to `master` for release assets.
+		if ( $data['release_asset'] ) {
+			unset( $data['branches']['master'] );
+		}
 		if ( null !== $data['branches'] ) {
 			foreach ( array_keys( $data['branches'] ) as $branch ) {
 				printf(
-					'<li><a href="%s%s" aria-label="' . esc_html__( 'Switch to branch ', 'github-updater' ) . $branch . '">%s</a></li>',
-					$data['nonced_update_url'],
+					'<li><a href="%s%s" aria-label="' . esc_html__( 'Switch to branch ', 'github-updater' ) . esc_attr( $branch ) . '">%s</a></li>',
+					esc_url( $data['nonced_update_url'] ),
 					'&rollback=' . rawurlencode( $branch ),
 					esc_attr( $branch )
 				);
@@ -603,12 +608,12 @@ class Base {
 			$rollback = array_keys( $rollback );
 			usort( $rollback, 'version_compare' );
 			krsort( $rollback );
-			$rollback = array_splice( $rollback, 0, 4, true );
-			array_shift( $rollback ); // Dump current tag.
+			$rollback = array_slice( $rollback, 0, 1 );
+
 			foreach ( $rollback as $tag ) {
 				printf(
-					'<li><a href="%s%s" aria-label="' . esc_html__( 'Switch to release ', 'github-updater' ) . $tag . '">%s</a></li>',
-					$data['nonced_update_url'],
+					'<li><a href="%s%s" aria-label="' . esc_html__( 'Switch to release ', 'github-updater' ) . esc_attr( $tag ) . '">%s</a></li>',
+					esc_url( $data['nonced_update_url'] ),
 					'&rollback=' . rawurlencode( $tag ),
 					esc_attr( $tag )
 				);
@@ -625,8 +630,8 @@ class Base {
 	 * Generate update URL.
 	 *
 	 * @param string $type      ( plugin or theme ).
-	 * @param string $action
-	 * @param string $repo_name
+	 * @param string $action    Query action.
+	 * @param string $repo_name Repo name.
 	 *
 	 * @return string
 	 */
